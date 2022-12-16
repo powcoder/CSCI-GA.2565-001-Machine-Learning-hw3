@@ -1,0 +1,211 @@
+\documentclass[11pt]{article}
+
+\input{packages}
+\input{math}
+
+\newif\ifshow
+\showtrue 
+\ifshow
+\newenvironment{solution}{\proof[Solution]\color{blue}}{\endproof} 
+
+\else
+\excludecomment{solution}
+\fi
+
+\begin{document}
+
+
+\title{CSCI-GA.2565-001 Machine Learning: Homework 3 \\
+\textbf{\large{Due 11.59 p.m. EST, Dec 19, 2022 on Gradescope}}}
+\author{{\color{blue}(fill in your name here)}\\
+    {\color{blue}(collaborators if any)}}
+\date{}
+\maketitle
+
+\noindent \textbf{We encourage \LaTeX-typeset submissions but will accept quality scans of hand-written pages.}
+
+\section{Variational Inference and Monte Carlo Gradients}
+
+In this question, we will review the details of variational inference (VI), in particular, we will implement the gradient estimators that make VI tractable.\\  
+
+\noindent We consider the latent variable model $p(\bz, \bx) = \prod_{i=1}^N p(\bx_i|\bz_i)p(\bz_i)$ where $\bx_i,\bz_i \in \mathbb{R}^D$. Recall that in VI, we find an approximation  $q_\lambda(\bz)$ to $p(\bz | \bx)$. 
+
+\begin{enumerate}[label=(\Alph*)]
+
+    \item Let $V_1(\lambda)$ be the set of variational approximations $\{q_\lambda: q_{\lambda}(\mathbf{z}) = \prod_{i=1}^N 
+    q(\bz_i; \lambda_i)\}$ where $\lambda_i$ are parameters learned for each datapoint $\bx_i$. Now consider $f_\lambda(\bx)$ as a deep neural network with \textit{fixed} architecture where $\lambda$ parametrizes the network. Let $V_2(\lambda)= \{q_\lambda : q_\lambda(\bz) = \prod_i^N q(\bz_i; f_\lambda(\bx_i))\}$. 
+    Which of the two families ($V_1$ or $V_2$) is more expressive, i.e. approximates a larger set of distributions? \textbf{Prove} your answer. 
+    
+    Will your answer change if we let $f_\lambda$ represent \textit{variable} architecture, e.g. if $\lambda$ parametrizes the set of multi-layered perceptrons of all sizes? Why or why not?   
+
+        \begin{solution}
+           Write your solution for each question using the \texttt{solution} environment. Feel free to use style packages to your convenience, e.g. \hl{highlighting parts of your solution that you still need to work on.}
+        \end{solution}
+        
+    \item For variational inference to work, we need to compute unbiased estimates of the gradient of the ELBO. In class, we learnt two such estimators: score function (REINFORCE) and pathwise (reparametrization) gradients. Let us see this in practice for a simpler inference problem.
+        
+    Consider the dataset of $N=100$ one-dimensional data points $\{x_i\}^N_{i=1}$ in \texttt{data.csv}. Suppose we want to minimize the following expectation with respect to a parameter $\mu$:
+        \begin{align}\label{eqn:sfg}
+            \min_\mu \mathop{\mathbb{E}}_{z\sim \mathcal{N}(\mu,1)} \left[ \sum^N_{i=1} (x_i - z)^2 \right]  
+        \end{align}
+            
+    \begin{enumerate}[label=(\roman*)]
+        
+        \item Write down the score function gradient for this problem. Using a suitable reparametrization, write down the reparameterization gradient for this problem. 
+        
+        \item Using PyTorch and for each of these two gradient estimators, perform gradient descent using $M=\{1,10,100,1000\}$ gradient samples for $T=10$ trials. Plot the mean and variance of the final estimate for $\mu$ for each value of $M$ across the $T$ trials.
+        
+        \textit{You should have two graphs, one for each gradient estimator. Each of the graph should contain two plots, one for the means and one for the variances. The $x$-axis should be $M$, hence each of these plots will have four points.}
+        
+    \end{enumerate}
+    
+    \item  What conditions do you require on $p(z)$ and $f(z)$ ($f(z)=\sum^N_{i=1} (x_i - z)^2$ in this case) for each of the two gradient estimators to be valid? Do these apply to both continuous and discrete distributions $p(z)$? 
+
+\end{enumerate} 
+
+\newpage 
+
+\section{Bayesian Parameters versus Latent Variables}
+
+\begin{enumerate}[label=(\Alph*)]
+
+    \item Consider the model $y_i \sim \mathcal{N}(\bw^\top \bx_i, \sigma^2)$ where the inverse-variance is distributed $\lambda = 1/\sigma^2 \sim \text{Gamma}(\alpha, \beta)$. Show that the predictive distribution $y^\star|\bw, \bx^\star, \alpha, \beta$ for a datapoint $\bx^\star$ follows a generalized T distribution
+    \begin{align*} 
+    T(t ; \nu,\mu,\theta)
+    =
+    \frac{\Gamma(\frac{\nu+1}{2})}{\Gamma(\nu/2)\theta\sqrt{\pi \nu }} \Big(1 + \frac{1}{\nu}\Big(\frac{t-\mu}{\theta}\Big)^2 \Big)^{-\frac{\nu + 1}{2}}
+    \end{align*} 
+    with degree $\nu = 2\alpha$, mean $\mu = \bw^\top \bx^\star$ and scale $\theta = \sqrt{\beta / \alpha}$.
+    You may use the property
+    $\Gamma(k) = \int_0^\infty x^{k-1} e^{-x} dx $.\\
+
+
+    \item Using your expression in (A), write down the MLE objective for $\bw$ on $N$ arbitrary labelled datapoints $\{ ( \bx_i, y_i ) \}^N_{i=1}$. Do not optimize this objective.
+
+    
+    \item Now consider the model $y_i \sim \mathcal{N}\Big( f(\mathbf{x}_i, \mathbf{z}_i, \mathbf{w}) , \sigma^2 \Big)$ where $\mathbf{z}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, $\sigma^2$ is known, and $f$ is a deep neural network parametrized by $\mathbf{w}$.
+    
+    \begin{enumerate}[label=(\roman*)]
+    
+        \item Write down an expression for the predictive distribution $y^\star|\bX, \by, \bx^\star$, where $\bX, \by$ denote the training datapoints. \textit{(You may leave your answer as an integral.)}
+    
+        \item Describe how you would approximate this distribution using variational inference and how you can use your approximation to make a prediction for $\bx^\star$. Your answer should include the distribution $p(\cdot)$ that you wish to approximate \textit{(which may or may not be the predictive distribution itself)}, the distribution $q(\cdot)$ that is the variational approximation, as well as the variational objective. 
+    \end{enumerate}
+    
+    \item Finally, consider the model $y \sim \mathcal{N}(\bw^\top \bx, \sigma^2)$ where $\bw \sim \mathcal{N}(\mathbf{0},I)$ and $\sigma^2$ is known.
+    
+    Derive a closed-form expression for the predictive distribution $y^\star|\bX, \by, \bx^\star$. What are the parameters of this predictive distribution and how do you optimize them?
+
+
+    \item Of the three models defined in parts (A), (C), and (D) above, which are latent variable models and which are not? Why? \textit{(If any are ambiguous, explain why.)}
+
+    
+    \item Of the three models defined in parts (A), (C), and (D) above, which are Bayesian models and which are not? Why? \textit{(If any are ambiguous, explain what is Bayesian about it and what is not.)}
+    
+
+\end{enumerate} 
+
+\newpage
+
+\section{Normalizing Flows}
+
+In this question, we will review how we can use invertible transformations and the change-of-variables formula to turn simple distributions into complex ones. Such transformations are known as \textit{normalizing flows}. One reason that flows are useful is that they can map unimodal distributions into multimodal ones, while still allowing for a tractable density.
+
+\begin{enumerate}[label=(\Alph*)]
+    \item Let $z_0 \sim \mathcal{N}(0,1)$. Produce a density plot of $z_0$ using $N=1000$ samples.
+    
+    Now look up ``Planar Flow" (Equation 4) of \href{https://arxiv.org/pdf/2006.00392.pdf}{The Expressive Power of a Class of Normalizing Flow Models}. Denote this flow as $f$. Choose an invertible non-linearity $h$ and find values of $w,b,u$ such that $f(z_0)$ is a multimodal distribution. Plot the density plot of $f(z_0)$ using the same $N=1000$ samples as above.
+    
+    \textit{Note that $d=1$ in this question. Also, it is fine to choose a $h$ that is only invertible on its output range, e.g. the sigmoid function on $(0,1)$.}
+
+    \item Use the change-of-variables formula and write down an explicit expression for the density of $f(z_0)$. This depends on your choice of $h$.
+
+
+    \item Let's generalize this to $D$-dimensional variables and to a sequence of invertible functions $f$ (not necessarily planar flows). We can sample $\bz^{(0)} \sim  \mathcal{N}(\mathbf{0}, I)$ and then transform that sample iteratively using a sequence of invertible functions, $f_1, \dots, f_K$, to finally obtain a sample $\bz^{(K)}$ where
+     \begin{align*}
+        \bz^{(K)} &= f_K \circ \dots \circ f_2 \circ f_1(\bz^{(0)}).
+     \end{align*}
+    Using the change-of-variables formula, write down a formula for the log-density of $\bz^{(K)}$ using the functions $\{f_k\}^K_{k=1}$, their inverses and Jacobians, as well as the log-density of $\bz^{(0)}$.
+
+
+    \item Let us consider how we can improve variational inference using flows.
+     \begin{enumerate}[label=(\roman*)]
+        \item How can we define an approximation $q_\lambda(\bz)$ to $p(\bz|\bx)$ using flows?
+        \item How do we train the model, i.e. optimize $\lambda$ to yield a good approximation to $p(\bz|\bx)$?
+        \item In what way is this more flexible than using a Gaussian approximation for $q_\lambda(\bz)$?
+     \end{enumerate}
+
+\end{enumerate}
+
+\newpage 
+
+\section{Causal Inference: Doubly Robust Estimators}
+
+Denote unit $i$'s treatment, outcome, and its vector of covariates by $T_i$, $Y_i$, and $X_i$. Let us model propensity scores by $e(x;\hat\theta)$ and the outcome by $f(x;\hat{\psi})$. Assume strong ignorability and positivity hold. We define the Doubly Robust Estimator (DRE) for the average outcome when treated, $\E[Y^{(1)}]$, by:
+\begin{align}
+    \frac{1}{n}\sum_{i=1}^n \left[\frac{T_iY_i}{e(X_i;\hat\theta)} - \frac{T_i - e(X_i;\hat\theta)}{e(X_i;\hat\theta)}f(X_i;\hat{\psi})\right]
+\end{align}
+\begin{enumerate}[label=(\Alph*)]
+
+    \item Suppose the propensity model is correctly specified, i.e. $e(x;\hat\theta) = P(T_i=1|X_i=x)$. Given any function $f$, show that the DRE is unbiased.
+
+
+    \item Suppose the model $f(x;\hat\psi)$ is correctly specified, i.e. $f(x;\hat\psi) = \E[Y_i^{(1)}|X_i=x] := \E[Y_i|X_i=x,T=1]$. Given any function $e$ taking values in $(0,1)$, show that the DRE is unbiased.
+
+
+    \item Recall that control variates improve Monte Carlo estimators by defining a new estimator with the same expectation but lower variance. For some estimator $f$, this is done by taking a function $g$ with $\E[g(x)] = 0$, and defining the new estimator as $\hat{f}(x)=f(x) - ag(x)$ for some $a \in \mathbb{R}$. Here $\E[\hat{f}] =\E[f]$, but the variances are not equal. The value of $a$ that makes the variance of $\hat{f}$ smallest is $a^* = \frac{Cov(f,g)}{Var(g)}$.
+
+    When both $e(x;\hat\theta)$ and $f(x;\hat\psi)$ are correctly specified, use control variates to justify the use of Doubly Robust Estimators.
+
+\end{enumerate}
+
+\newpage
+
+\section{Generative Models with $f$-divergences}
+
+Given two distributions $P$ and $Q$ with density functions $p$ and $q$, we define the $f$-divergence as:
+\[
+D_f(P\| Q) = \int q(x) f\left(\frac{p(x)}{q(x)}\right)dx
+\]
+with respect to a convex function $f$.
+
+\begin{enumerate}[label=(\Alph*)]
+    \item How can we estimate $f$-divergences using likelihood-ratio estimators as we learned in class?
+    
+
+    \item Using the estimate from your solution to (A), show how we can minimize $D_f(P\| Q_{\theta})$ with respect to $\theta$.
+    
+    
+    \item Let $\cQ$ denote the family of distributions that $Q_\theta$ lives in. Assume that $P \not\in \cQ$. Compare the
+    KL and Reverse KL divergences. What are properties that each $f$-divergence imposes on its corresponding minimizer $Q_\theta^\star$, i.e.\
+    \[Q_\theta^\star = \arg\min_{Q_\theta\in \cQ} D_f(P\| Q_\theta) \]
+
+    \begin{table}[h]
+    \begin{center}
+        \begin{tabular}{ccc}
+        \hline
+          Name   &  $D_f(P||Q)$ & $f(u)$\\ \hline
+         Kullback-Leibler    & $\int p(x) \log \frac{p(x)}{q(x)} dx$ & $u \log u$ \\
+         Reverse KL & $\int q(x) \log \frac{q(x)}{p(x)} dx$ & $-\log u$ \\
+         \end{tabular}
+    \end{center}
+    \end{table}
+
+\end{enumerate}
+
+\newpage
+
+\section{Reinforcement Learning with Sparse Rewards}
+
+\noindent Suppose that you have a robot that should learn to move from any of a set of starting positions $s_0 \in \mathcal{S}_0$ to a goal position $G$. The robot can move by performing a sequence of small, low-level continuous actions, such as rotating its joints. However, you do not know how to explicitly program a sequence of actions that will move the robot from any $s_0$ to $G$. You decide to use a reinforcement learning algorithm. Your RL algorithm uses the policy gradient to learn a policy $\pi_\theta(a|s)$ that maps from states $s$ to distributions over actions $a$. You consider learning episodes of a finite number of $T$ steps.
+
+
+\begin{enumerate}[label=(\Alph*)]
+    \item You start by designing the Markov Decision Process (MDP) that defines the robot's learning environment. The robot receives reward $R=1000$ when it reaches location $G$ and $R=0$ upon entering any other position. What is the Monte Carlo estimate of the policy gradient when $G$ is not reached in $T$ steps in any of the sample trajectories? What happens as the robot explores in this environment and what will its learning process look like?
+
+    \item Suppose the robot must start in $s_0$ for all learning trajectories. Name two ways you could alter the MDP environment to improve exploration and gradients.
+    
+
+\end{enumerate}
+
+\end{document} 
